@@ -46,8 +46,15 @@ app.add_middleware(
 
 class UserInput(BaseModel):
     text: str
-
+    use_gpt: bool = False  
         
+def add_gpt_answer(similar_context):
+    # Добавить сюда yagpt
+    return [{
+        "topic": "Ответ YaGPT", 
+        "full_text": "Ответ сгенерирован YaGPT на основе контекст"
+    }]        
+
 data = pd.read_excel("file/answers_search.xlsx")   #заменить на переменную окружения 
 answer_embs = torch.load("file/answer_embeddings.pt") #заменить на переменную окружения 
 
@@ -68,6 +75,9 @@ async def greet(user_input: UserInput):
         raise HTTPException(status_code=400, detail="Text cannot be empty")
     
     results = model.find_answer(user_question=user_input.text, answer_embs=answer_embs, answers_df=data)
+    
+    if user_input.use_gpt:
+        return {"results": add_gpt_answer(results)}
     return {"results": results}
 
 @app.get("/", response_class=HTMLResponse)
@@ -170,6 +180,36 @@ async def read_root():
                 background: #d0d0d0;
             }}
             
+            .gpt-toggle {{
+                background: #e0e0e0;
+                color: var(--text-color);
+                position: relative;
+                padding-left: 2.5rem;
+                transition: all 0.3s ease;
+            }}
+            
+            .gpt-toggle.active {{
+                background: var(--secondary-color);
+                color: white;
+            }}
+            
+            .gpt-toggle::before {{
+                content: '';
+                position: absolute;
+                left: 0.8rem;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 16px;
+                height: 16px;
+                background: #fff;
+                border-radius: 4px;
+                transition: all 0.3s ease;
+            }}
+            
+            .gpt-toggle.active::before {{
+                left: calc(100% - 1.8rem);
+            }}
+            
             #modelStatus {{
                 padding: 1rem;
                 margin: 1rem 0;
@@ -234,6 +274,15 @@ async def read_root():
             <h1>🤖 Марк</h1>
             <div id="modelStatus">📦 {model_loading_status}</div>
             
+            <div class="button-group">
+                <button id="toggleGpt" class="gpt-toggle">
+                    <svg style="width:20px;height:20px" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M12 4V2A10 10 0 0 0 2 12H4A8 8 0 0 1 12 4Z"/>
+                    </svg>
+                    GPT-version
+                </button>
+            </div>
+            
             <textarea 
                 id="userInput" 
                 placeholder="Введите ваш вопрос..."
@@ -260,6 +309,8 @@ async def read_root():
         </div>
 
         <script>
+            let isGptEnabled = false;
+
             function escapeHtml(unsafe) {{
                 return unsafe
                     .replace(/&/g, "&amp;")
@@ -286,7 +337,10 @@ async def read_root():
                     const response = await fetch('/greet', {{
                         method: 'POST',
                         headers: {{ 'Content-Type': 'application/json' }},
-                        body: JSON.stringify({{ text: userInput }})
+                        body: JSON.stringify({{
+                            text: userInput,
+                            use_gpt: isGptEnabled
+                        }})
                     }});
 
                     const data = await response.json();
@@ -323,7 +377,12 @@ async def read_root():
                 }}
             }}
 
-            // Обработчики событий
+            document.getElementById('toggleGpt').addEventListener('click', () => {{
+                isGptEnabled = !isGptEnabled;
+                const gptButton = document.getElementById('toggleGpt');
+                gptButton.classList.toggle('active', isGptEnabled);
+            }});
+
             document.getElementById('sendRequest').addEventListener('click', handleSubmit);
             
             document.getElementById('clearInput').addEventListener('click', () => {{
@@ -331,7 +390,6 @@ async def read_root():
                 document.getElementById('response').innerHTML = '';
             }});
 
-            // Обработка Enter
             document.getElementById('userInput').addEventListener('keypress', (e) => {{
                 if (e.key === 'Enter' && !e.shiftKey) {{
                     e.preventDefault();
