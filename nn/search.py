@@ -3,6 +3,7 @@ from transformers import XLMRobertaTokenizer, XLMRobertaModel
 import torch
 import torch.nn.functional as F
 from torch import Tensor
+from tqdm import tqdm
 
 
 class Bertinskii:
@@ -15,7 +16,7 @@ class Bertinskii:
     def load_tokenizer_model(self, model_name):
         try:
             self.model_name = model_name
-            self.tokenizer = XLMRobertaTokenizer.from_pretrained(self.model_name) # вот тут баг был
+            self.tokenizer = XLMRobertaTokenizer.from_pretrained(self.model_name) #
             self.model = XLMRobertaModel.from_pretrained(self.model_name).to(self.device) #
             self.model.eval()
             print(f"Loaded {self.model_name} on {self.device}")
@@ -53,9 +54,10 @@ class Bertinskii:
         return torch.cat(all_embeddings, dim=0).cpu()
 
     def find_answer(self, user_question: str, answer_embs: torch.tensor, answers_df: pd.DataFrame, topk: int = 3) -> str:
-
+        query_text = f"query: {user_question}"  # или "query:" + user_question
+        
         query_input = self.tokenizer(
-            [user_question],
+            [query_text],
             max_length=512,
             padding=True,
             truncation=True,
