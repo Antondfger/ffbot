@@ -54,7 +54,7 @@ class Bertinskii:
         return torch.cat(all_embeddings, dim=0).cpu()
 
     def find_answer(self, user_question: str, answer_embs: torch.tensor, answers_df: pd.DataFrame, topk: int = 3) -> str:
-        query_text = f"query: {user_question}"  # или "query:" + user_question
+        query_text = f"query: {user_question}" 
         
         query_input = self.tokenizer(
             [query_text],
