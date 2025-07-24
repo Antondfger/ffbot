@@ -6,7 +6,7 @@ from torch import Tensor
 from tqdm import tqdm
 
 
-class Bertinskii:
+class Bertinskii: # not needed more
     def __init__(self, device: str = 'cpu'):
         self.model_name = None
         self.device = device
